@@ -30,24 +30,24 @@ import com.neet.cbt.viewmodel.Screen
 
 @Composable
 fun ExamScreen(vm: ExamViewModel) {
-    val exam by vm.exam.collectAsState()
+    val exam            by vm.exam.collectAsState()
     val currentSectionIdx by vm.currentSectionIndex.collectAsState()
-    val currentQIdx by vm.currentQuestionIndexInSection.collectAsState()
-    val tempSelection by vm.tempSelection.collectAsState()
-    val answers by vm.answers.collectAsState()
-    val bitmap by vm.currentBitmap.collectAsState()
-    var showSubmitDialog by remember { mutableStateOf(false) }
+    val currentQIdx     by vm.currentQuestionIndexInSection.collectAsState()
+    val tempSelection   by vm.tempSelection.collectAsState()
+    val answers         by vm.answers.collectAsState()
+    val bitmap          by vm.currentBitmap.collectAsState()
 
-    val currentSection = exam.sections[currentSectionIdx]
+    val currentSection  = exam.sections[currentSectionIdx]
     val currentQuestion = currentSection.questions[currentQIdx]
 
-    // Load bitmap when question changes
+    // Reload bitmap whenever the question changes
     LaunchedEffect(currentQuestion.id) {
         vm.loadBitmapForCurrentQuestion()
     }
 
     Column(modifier = Modifier.fillMaxSize().background(NTALightGrey)) {
-        // ── Top Header ───────────────────────────────────────────────────────
+
+        // ── Top NTA Header ───────────────────────────────────────────────────
         NTAHeader()
 
         // ── Candidate Info Bar ────────────────────────────────────────────────
@@ -64,11 +64,9 @@ fun ExamScreen(vm: ExamViewModel) {
                 InfoRow("Exam Name", "NEET")
                 InfoRow("Subject Name", currentSection.name, valueColor = Color(0xFF2563EB))
             }
-
             Column(horizontalAlignment = Alignment.End) {
                 TimerDisplay(vm = vm)
                 Spacer(modifier = Modifier.height(4.dp))
-                // Language selector placeholder
                 Box(
                     modifier = Modifier
                         .border(1.dp, NTABorder, RoundedCornerShape(4.dp))
@@ -111,13 +109,13 @@ fun ExamScreen(vm: ExamViewModel) {
         }
         HorizontalDivider(color = NTABorder)
 
-        // ── Main Body: Question + Palette ────────────────────────────────────
+        // ── Main Body: Question + Palette ─────────────────────────────────────
         Row(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            // ── Question Area (left, ~70%) ─────────────────────────────────
+            // ── Left column: Question area (~70%) ─────────────────────────────
             Column(
                 modifier = Modifier
                     .weight(0.7f)
@@ -130,7 +128,7 @@ fun ExamScreen(vm: ExamViewModel) {
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // Question header
+                    // Question number header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -150,7 +148,7 @@ fun ExamScreen(vm: ExamViewModel) {
                         )
                     }
 
-                    // Question text
+                    // Question stem text
                     Text(
                         text = currentQuestion.text,
                         fontSize = 13.sp,
@@ -159,96 +157,87 @@ fun ExamScreen(vm: ExamViewModel) {
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
-                    // PDF page image (for questions with figures)
-                    if (currentQuestion.hasImage && bitmap != null) {
-                        Image(
-                            bitmap = bitmap!!.asImageBitmap(),
-                            contentDescription = "Question ${currentQuestion.id} figure",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 220.dp)
-                                .padding(bottom = 12.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    } else if (currentQuestion.hasImage) {
-                        // Loading placeholder
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                                .background(NTALightGrey),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "[Figure: Loading from question paper...]",
-                                fontSize = 11.sp,
-                                color = NTADarkGrey,
-                                textAlign = TextAlign.Center
+                    // PDF page image for questions with figures
+                    if (currentQuestion.hasImage) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap!!.asImageBitmap(),
+                                contentDescription = "Figure for Question ${currentQuestion.id}",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 220.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .padding(bottom = 12.dp),
+                                contentScale = ContentScale.Fit
                             )
+                        } else {
+                            // Shown while PDF page is loading from cache
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(70.dp)
+                                    .background(NTALightGrey, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = NTABlue,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
 
-                    // ── Options ──────────────────────────────────────────────
-                    currentQuestion.options.forEachIndexed { index, optionText ->
-                        val label = listOf("A", "B", "C", "D")[index]
-                        val isSelected = tempSelection == index
-                        val isSaved = answers[currentQuestion.id] == index
-
-                        OptionRow(
-                            label = label,
-                            text = optionText,
-                            isSelected = isSelected,
-                            isSaved = isSaved,
-                            onClick = { vm.selectOption(index) }
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-
-                    // Dropped question notice
-                    if (currentQuestion.correctOption == -1) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                    // ── Dropped-question notice (Q40) ─────────────────────────
+                    if (currentQuestion.correctOption == -2) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF9C3)),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
                         ) {
                             Text(
-                                text = "⚠ This question was DROPPED by NTA. Full marks (+4) will be awarded to all candidates.",
+                                text = "⚠  This question was DROPPED by NTA. Full marks (+4) will be awarded to ALL candidates.",
                                 fontSize = 11.sp,
                                 color = Color(0xFF92400E),
                                 modifier = Modifier.padding(10.dp)
                             )
                         }
                     }
+
+                    // ── Options ──────────────────────────────────────────────────
+                    currentQuestion.options.forEachIndexed { index, optionText ->
+                        val label    = listOf("A", "B", "C", "D")[index]
+                        val isSelected = tempSelection == index
+                        val isSaved    = answers[currentQuestion.id] == index
+
+                        OptionRow(
+                            label      = label,
+                            text       = optionText,
+                            isSelected = isSelected,
+                            isSaved    = isSaved,
+                            onClick    = { vm.selectOption(index) }
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
                 }
 
                 HorizontalDivider(color = NTABorder)
 
-                // ── Bottom Action Bar ────────────────────────────────────────
+                // ── Bottom Action Bar ─────────────────────────────────────────
                 BottomActionBar(
                     vm = vm,
-                    onSubmitClick = { showSubmitDialog = true }
+                    // SUBMIT → SummaryScreen (consistent with timer auto-submit flow)
+                    onSubmitClick = { vm.navigate(Screen.Summary) }
                 )
             }
 
-            // ── Palette (right, ~30%) ──────────────────────────────────────
+            // ── Right column: Question Palette (~30%) ─────────────────────────
             QuestionPalette(vm = vm)
         }
     }
-
-    // ── Submit Confirmation Dialog ──────────────────────────────────────────
-    if (showSubmitDialog) {
-        SubmitConfirmDialog(
-            vm = vm,
-            onDismiss = { showSubmitDialog = false },
-            onConfirm = {
-                showSubmitDialog = false
-                vm.stopTimer()
-                vm.navigate(Screen.Result)
-            }
-        )
-    }
 }
+
+// ─── Private Composables ──────────────────────────────────────────────────────
 
 @Composable
 private fun OptionRow(
@@ -282,18 +271,18 @@ private fun OptionRow(
     ) {
         RadioButton(
             selected = isSelected,
-            onClick = onClick,
-            colors = RadioButtonDefaults.colors(
-                selectedColor = NTALightBlue,
+            onClick  = onClick,
+            colors   = RadioButtonDefaults.colors(
+                selectedColor   = NTALightBlue,
                 unselectedColor = NTADarkGrey
             ),
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = "($label)  $text",
+            text     = "($label)  $text",
             fontSize = 13.sp,
-            color = Color(0xFF1F2937),
+            color    = Color(0xFF1F2937),
             modifier = Modifier.weight(1f)
         )
     }
@@ -303,89 +292,15 @@ private fun OptionRow(
 private fun InfoRow(label: String, value: String, valueColor: Color = Color(0xFF1F2937)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = "$label : ",
+            text     = "$label : ",
             fontSize = 11.sp,
-            color = NTADarkGrey
+            color    = NTADarkGrey
         )
         Text(
-            text = value,
-            fontSize = 11.sp,
-            color = valueColor,
+            text       = value,
+            fontSize   = 11.sp,
+            color      = valueColor,
             fontWeight = FontWeight.SemiBold
         )
     }
 }
-
-@Composable
-private fun SubmitConfirmDialog(
-    vm: ExamViewModel,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    val summary = vm.getSummaryCount()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Exam Summary",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = NTABlue
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SummaryRow("Total Questions", summary.total.toString())
-                SummaryRow("Answered", summary.answered.toString(), Color(0xFF16A34A))
-                SummaryRow("Not Answered", summary.notAnswered.toString(), Color(0xFFDC2626))
-                SummaryRow("Marked for Review", summary.markedForReview.toString(), Color(0xFF7C3AED))
-                SummaryRow("Answered & Marked", summary.answeredAndMarked.toString(), Color(0xFF7C3AED))
-                SummaryRow("Not Visited", summary.notVisited.toString(), Color(0xFF6B7280))
-
-                Spacer(modifier = Modifier.height(6.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "⚠ Are you sure you want to submit for final marking? No changes will be allowed after submission.",
-                    fontSize = 12.sp,
-                    color = Color(0xFFDC2626),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = NTAGreen),
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text("YES – SUBMIT", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text("NO – CONTINUE", color = NTABlue)
-            }
-        },
-        containerColor = Color.White,
-        shape = RoundedCornerShape(8.dp)
-    )
-}
-
-@Composable
-private fun SummaryRow(label: String, value: String, valueColor: Color = Color(0xFF1F2937)) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, fontSize = 13.sp, color = Color(0xFF374151))
-        Text(value, fontSize = 13.sp, color = valueColor, fontWeight = FontWeight.Bold)
-    }
-}
-
-// Note: clip() is imported from androidx.compose.ui.draw

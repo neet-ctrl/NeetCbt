@@ -15,18 +15,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neet.cbt.data.Question
 import com.neet.cbt.data.QuestionStatus
 import com.neet.cbt.ui.theme.*
 import com.neet.cbt.viewmodel.ExamViewModel
-import com.neet.cbt.viewmodel.Screen
 
 @Composable
 fun ResultScreen(vm: ExamViewModel) {
-    val exam by vm.exam.collectAsState()
+    val exam    by vm.exam.collectAsState()
     val answers by vm.answers.collectAsState()
     val statuses by vm.statuses.collectAsState()
-    val score = vm.getScoreResult()
+    val score   = remember { vm.getScoreResult() }
     var searchText by remember { mutableStateOf("") }
 
     val allQuestions = exam.sections.flatMap { it.questions }
@@ -40,7 +38,7 @@ fun ResultScreen(vm: ExamViewModel) {
     ) {
         NTAHeader()
 
-        // Success banner
+        // ── Success Banner ────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -49,72 +47,84 @@ fun ResultScreen(vm: ExamViewModel) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "✓  Thank you — Submitted Successfully!",
-                color = Color.White,
+                text       = "✓  Thank you — Submitted Successfully!",
+                color      = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+                fontSize   = 14.sp
             )
         }
 
-        // ── Score Cards ────────────────────────────────────────────────────
+        // ── Score Cards ───────────────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ScoreCard("Total Qs", score.total.toString(), Color(0xFF2563EB), Modifier.weight(1f))
+            ScoreCard("Total Qs",  score.total.toString(),     Color(0xFF2563EB), Modifier.weight(1f))
             ScoreCard("Attempted", score.attempted.toString(), Color(0xFF7C3AED), Modifier.weight(1f))
-            ScoreCard("Correct", score.correct.toString(), NTAGreen, Modifier.weight(1f))
-            ScoreCard("Incorrect", score.incorrect.toString(), NTARed, Modifier.weight(1f))
-            ScoreCard("Score", score.score.toString(), NTABlue, Modifier.weight(1f))
-            ScoreCard("Max Marks", "720", Color(0xFF6B7280), Modifier.weight(1f))
+            ScoreCard("Correct",   score.correct.toString(),   NTAGreen,          Modifier.weight(1f))
+            ScoreCard("Incorrect", score.incorrect.toString(), NTARed,            Modifier.weight(1f))
+            ScoreCard("Score",     score.score.toString(),     NTABlue,           Modifier.weight(1f))
+            ScoreCard("Max Marks", "720",                      Color(0xFF6B7280), Modifier.weight(1f))
         }
 
-        // Percentage bar
-        val percentage = if (score.total > 0) (score.score.toFloat() / 720f * 100f).coerceIn(0f, 100f) else 0f
+        // ── Score Percentage Bar ──────────────────────────────────────────────
+        val percentage = if (score.total > 0)
+            (score.score.toFloat() / 720f * 100f).coerceIn(0f, 100f) else 0f
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(8.dp)
+            shape  = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Score: ${score.score} / 720", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = NTABlue)
-                    Text("%.1f%%".format(percentage), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = NTAGreen)
+                    Text(
+                        "Score: ${score.score} / 720",
+                        fontWeight = FontWeight.Bold,
+                        fontSize   = 13.sp,
+                        color      = NTABlue
+                    )
+                    Text(
+                        "%.1f%%".format(percentage),
+                        fontWeight = FontWeight.Bold,
+                        fontSize   = 13.sp,
+                        color      = NTAGreen
+                    )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(
-                    progress = { percentage / 100f },
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    color = when {
+                    progress    = { percentage / 100f },
+                    modifier    = Modifier.fillMaxWidth().height(8.dp),
+                    color       = when {
                         percentage >= 60 -> NTAGreen
                         percentage >= 40 -> NTAOrange
-                        else -> NTARed
+                        else             -> NTARed
                     },
-                    trackColor = NTALightGrey
+                    trackColor  = NTALightGrey
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ── Question-wise Table ─────────────────────────────────────────────
+        // ── Question-wise Analysis Table ──────────────────────────────────────
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .weight(1f),
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(8.dp)
+            shape  = RoundedCornerShape(8.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Search bar
+                // Search row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -124,22 +134,20 @@ fun ResultScreen(vm: ExamViewModel) {
                     Text(
                         "Question-wise Analysis",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = NTABlue,
-                        modifier = Modifier.weight(1f)
+                        fontSize   = 13.sp,
+                        color      = NTABlue,
+                        modifier   = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = searchText,
-                        onValueChange = { searchText = it },
-                        placeholder = { Text("Search Q#", fontSize = 11.sp) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .width(130.dp)
-                            .height(40.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NTALightBlue,
+                        value           = searchText,
+                        onValueChange   = { searchText = it },
+                        placeholder     = { Text("Search Q#", fontSize = 11.sp) },
+                        singleLine      = true,
+                        modifier        = Modifier.width(130.dp).height(40.dp),
+                        shape           = RoundedCornerShape(6.dp),
+                        textStyle       = LocalTextStyle.current.copy(fontSize = 12.sp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = NTALightBlue,
                             unfocusedBorderColor = NTABorder
                         )
                     )
@@ -148,37 +156,43 @@ fun ResultScreen(vm: ExamViewModel) {
                 // Table header
                 TableHeader()
 
+                // Question rows
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(filteredQuestions) { q ->
                         val selectedIdx = answers[q.id]
-                        val status = statuses[q.id] ?: QuestionStatus.NOT_VISITED
-                        val isAnswered = selectedIdx != null
-                        val isCorrect = selectedIdx != null && q.correctOption >= 0 && selectedIdx == q.correctOption
-                        val isDropped = q.correctOption == -1
+                        val isAnswered  = selectedIdx != null
+                        // correctOption == -2 means NTA dropped the question (bonus to all)
+                        val isDropped   = q.correctOption == -2
+                        val isCorrect   = !isDropped && isAnswered &&
+                                q.correctOption >= 0 && selectedIdx == q.correctOption
 
                         TableRow(
-                            questionId = q.id,
-                            selectedOption = selectedIdx?.let { listOf("A", "B", "C", "D")[it] } ?: "--",
-                            status = when {
+                            questionId     = q.id,
+                            selectedOption = selectedIdx?.let { listOf("A","B","C","D")[it] } ?: "--",
+                            status         = when {
                                 isDropped    -> "Dropped (+4)"
                                 !isAnswered  -> "Not Attempted"
                                 isCorrect    -> "Correct ✓"
                                 else         -> "Incorrect ✗"
                             },
-                            statusColor = when {
+                            statusColor    = when {
                                 isDropped    -> Color(0xFF7C3AED)
                                 !isAnswered  -> NTADarkGrey
                                 isCorrect    -> NTAGreen
                                 else         -> NTARed
                             },
-                            correctOption = if (q.correctOption >= 0) listOf("A", "B", "C", "D")[q.correctOption] else "N/A",
-                            marks = when {
+                            correctOption  = when {
+                                isDropped           -> "Dropped"
+                                q.correctOption >= 0 -> listOf("A","B","C","D")[q.correctOption]
+                                else                 -> "N/A"
+                            },
+                            marks          = when {
                                 isDropped    -> "+4"
                                 !isAnswered  -> "0"
                                 isCorrect    -> "+4"
                                 else         -> "-1"
                             },
-                            marksColor = when {
+                            marksColor     = when {
                                 isDropped    -> Color(0xFF7C3AED)
                                 !isAnswered  -> NTADarkGrey
                                 isCorrect    -> NTAGreen
@@ -193,7 +207,7 @@ fun ResultScreen(vm: ExamViewModel) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Footer
+        // ── Footer ───────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -203,12 +217,14 @@ fun ResultScreen(vm: ExamViewModel) {
         ) {
             Text(
                 "© All Rights Reserved - National Testing Agency",
-                color = Color.White,
+                color    = Color.White,
                 fontSize = 11.sp
             )
         }
     }
 }
+
+// ─── Private Composables ──────────────────────────────────────────────────────
 
 @Composable
 private fun ScoreCard(
@@ -219,25 +235,25 @@ private fun ScoreCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = color),
-        shape = RoundedCornerShape(8.dp)
+        colors   = CardDefaults.cardColors(containerColor = color),
+        shape    = RoundedCornerShape(8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier              = Modifier.padding(10.dp),
+            horizontalAlignment   = Alignment.CenterHorizontally,
+            verticalArrangement   = Arrangement.Center
         ) {
             Text(
                 value,
-                color = Color.White,
+                color      = Color.White,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = 22.sp,
-                textAlign = TextAlign.Center
+                fontSize   = 22.sp,
+                textAlign  = TextAlign.Center
             )
             Text(
                 label,
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 10.sp,
+                color     = Color.White.copy(alpha = 0.85f),
+                fontSize  = 10.sp,
                 textAlign = TextAlign.Center
             )
         }
@@ -253,11 +269,11 @@ private fun TableHeader() {
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TableCell("Q.No", 0.1f, Color.White, bold = true)
-        TableCell("Selected", 0.15f, Color.White, bold = true)
-        TableCell("Status", 0.35f, Color.White, bold = true)
-        TableCell("Correct Ans", 0.2f, Color.White, bold = true)
-        TableCell("Marks", 0.2f, Color.White, bold = true)
+        TableCell("Q.No",        0.10f, Color.White, bold = true)
+        TableCell("Selected",    0.15f, Color.White, bold = true)
+        TableCell("Status",      0.35f, Color.White, bold = true)
+        TableCell("Correct Ans", 0.20f, Color.White, bold = true)
+        TableCell("Marks",       0.20f, Color.White, bold = true)
     }
 }
 
@@ -279,11 +295,11 @@ private fun TableRow(
             .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TableCell(questionId.toString(), 0.1f, NTABlue, bold = true)
-        TableCell(selectedOption, 0.15f, Color(0xFF374151))
-        TableCell(status, 0.35f, statusColor, bold = true)
-        TableCell(correctOption, 0.2f, NTAGreen, bold = true)
-        TableCell(marks, 0.2f, marksColor, bold = true)
+        TableCell(questionId.toString(), 0.10f, NTABlue,          bold = true)
+        TableCell(selectedOption,        0.15f, Color(0xFF374151))
+        TableCell(status,                0.35f, statusColor,       bold = true)
+        TableCell(correctOption,         0.20f, NTAGreen,          bold = true)
+        TableCell(marks,                 0.20f, marksColor,        bold = true)
     }
 }
 
@@ -295,11 +311,11 @@ private fun RowScope.TableCell(
     bold: Boolean = false
 ) {
     Text(
-        text = text,
-        modifier = Modifier.weight(weight),
-        fontSize = 11.sp,
-        color = color,
+        text       = text,
+        modifier   = Modifier.weight(weight),
+        fontSize   = 11.sp,
+        color      = color,
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-        textAlign = TextAlign.Center
+        textAlign  = TextAlign.Center
     )
 }

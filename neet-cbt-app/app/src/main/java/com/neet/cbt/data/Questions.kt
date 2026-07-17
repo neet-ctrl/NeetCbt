@@ -345,7 +345,7 @@ fun buildPhysicsSection() = Section(
             id = 40,
             text = "One MSD of a Vernier calliper is 1 mm, Vernier scale has 10 divisions. When jaws touch, Vernier scale shifts left and 4th Vernier division coincides with a MSD. If measured length is 1 cm, actual length is:\n[Note: This question was DROPPED by NTA — full marks awarded to all]",
             options = listOf("1.04 cm", "0.60 cm", "0.96 cm", "1.00 cm"),
-            correctOption = -1 // Dropped
+            correctOption = -2 // Dropped (bonus +4 to all)
         ),
         Question(
             id = 41,
