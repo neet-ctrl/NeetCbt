@@ -116,7 +116,8 @@ fun LoginScreen(vm: ExamViewModel) {
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = NTALightBlue,
                                     unfocusedBorderColor = Color(0xFFD1D5DB),
-                                    containerColor = Color(0xFFF9FAFB)
+                                    focusedContainerColor = Color(0xFFF9FAFB),
+                                    unfocusedContainerColor = Color(0xFFF9FAFB)
                                 ),
                                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                             )
@@ -136,7 +137,8 @@ fun LoginScreen(vm: ExamViewModel) {
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = NTALightBlue,
                                     unfocusedBorderColor = Color(0xFFD1D5DB),
-                                    containerColor = Color(0xFFF9FAFB)
+                                    focusedContainerColor = Color(0xFFF9FAFB),
+                                    unfocusedContainerColor = Color(0xFFF9FAFB)
                                 ),
                                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                             )
