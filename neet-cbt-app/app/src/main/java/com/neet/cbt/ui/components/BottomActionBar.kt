@@ -1,5 +1,6 @@
 package com.neet.cbt.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -10,119 +11,136 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neet.cbt.ui.theme.*
 import com.neet.cbt.viewmodel.ExamViewModel
 
+/**
+ * Two-row bottom action bar matching NTA CBT screenshots exactly:
+ *
+ * Row 1: [SAVE & NEXT]  [CLEAR]  [SAVE & MARK FOR REVIEW]  [MARK FOR REVIEW & NEXT]
+ * Row 2: [<< BACK]  [NEXT >>]  ···  [SUBMIT]
+ */
 @Composable
 fun BottomActionBar(
     vm: ExamViewModel,
     onSubmitClick: () -> Unit
 ) {
-    Surface(
-        shadowElevation = 6.dp,
-        color = Color.White
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+        // ── Row 1: main action buttons ────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Top row: SAVE & NEXT | CLEAR | SAVE & MARK | MARK & NEXT | SUBMIT
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // SAVE & NEXT
-                ActionButton(
-                    text = "SAVE & NEXT",
-                    containerColor = NTAGreen,
-                    modifier = Modifier.weight(1.6f)
-                ) { vm.saveAndNext() }
+            // SAVE & NEXT
+            NtaButton(
+                text = "SAVE & NEXT",
+                containerColor = Color(0xFF16A34A),
+                textColor = Color.White,
+                onClick = { vm.saveAndNext() },
+                modifier = Modifier.weight(1f)
+            )
+            // CLEAR
+            NtaOutlineButton(
+                text = "CLEAR",
+                onClick = { vm.clearAnswer() },
+                modifier = Modifier.weight(0.6f)
+            )
+            // SAVE & MARK FOR REVIEW
+            NtaButton(
+                text = "SAVE & MARK FOR REVIEW",
+                containerColor = Color(0xFFF59E0B),
+                textColor = Color.White,
+                onClick = { vm.saveAndMarkForReview() },
+                modifier = Modifier.weight(1.3f)
+            )
+            // MARK FOR REVIEW & NEXT
+            NtaButton(
+                text = "MARK FOR REVIEW & NEXT",
+                containerColor = Color(0xFF2563EB),
+                textColor = Color.White,
+                onClick = { vm.markForReviewAndNext() },
+                modifier = Modifier.weight(1.3f)
+            )
+        }
 
-                // CLEAR
-                OutlinedButton(
-                    onClick = { vm.clearAnswer() },
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(36.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
-                ) {
-                    Text("CLEAR", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NTADarkGrey)
-                }
-
-                // SAVE & MARK FOR REVIEW
-                ActionButton(
-                    text = "SAVE & MARK FOR REVIEW",
-                    containerColor = NTAOrange,
-                    modifier = Modifier.weight(2.2f)
-                ) { vm.saveAndMarkForReview() }
-
-                // MARK FOR REVIEW & NEXT
-                ActionButton(
-                    text = "MARK FOR REVIEW & NEXT",
-                    containerColor = Color(0xFF9333EA),
-                    modifier = Modifier.weight(2.2f)
-                ) { vm.markForReviewAndNext() }
-
-                // SUBMIT
-                ActionButton(
-                    text = "SUBMIT",
-                    containerColor = NTAGreen,
-                    modifier = Modifier.weight(1.2f)
-                ) { onSubmitClick() }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Bottom row: << BACK | NEXT >>
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = { vm.goBack() },
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.height(32.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Text("<< BACK", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = NTABlue)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(
-                    onClick = { vm.goNext() },
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.height(32.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Text("NEXT >>", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = NTABlue)
-                }
-            }
+        // ── Row 2: nav + submit ───────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NtaOutlineButton(
+                text = "<< BACK",
+                onClick = { vm.goBack() },
+                modifier = Modifier.wrapContentWidth()
+            )
+            Spacer(Modifier.width(6.dp))
+            NtaOutlineButton(
+                text = "NEXT >>",
+                onClick = { vm.goNext() },
+                modifier = Modifier.wrapContentWidth()
+            )
+            Spacer(Modifier.weight(1f))
+            NtaButton(
+                text = "SUBMIT",
+                containerColor = Color(0xFF16A34A),
+                textColor = Color.White,
+                onClick = onSubmitClick,
+                modifier = Modifier.wrapContentWidth()
+            )
         }
     }
 }
 
+// ─── Private button helpers ───────────────────────────────────────────────────
+
 @Composable
-private fun ActionButton(
+private fun NtaButton(
     text: String,
     containerColor: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    textColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
-        shape = RoundedCornerShape(4.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
         modifier = modifier.height(36.dp),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+        shape = RoundedCornerShape(3.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
     ) {
         Text(
             text = text,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
-            maxLines = 1
+            color = textColor,
+            letterSpacing = 0.2.sp
+        )
+    }
+}
+
+@Composable
+private fun NtaOutlineButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(36.dp),
+        shape = RoundedCornerShape(3.dp),
+        border = ButtonDefaults.outlinedButtonBorder,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF374151)
         )
     }
 }

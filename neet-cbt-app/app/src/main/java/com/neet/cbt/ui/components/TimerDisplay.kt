@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neet.cbt.viewmodel.ExamViewModel
 
+/** Matching the NTA screenshot: "Remaining Time : [02:56:16]" where the time is a blue badge */
 @Composable
 fun TimerDisplay(vm: ExamViewModel) {
     val remaining by vm.remainingSeconds.collectAsState()
@@ -25,32 +26,33 @@ fun TimerDisplay(vm: ExamViewModel) {
     val minutes = (remaining % 3600) / 60
     val seconds = remaining % 60
 
-    val color = when {
-        remaining <= 300  -> Color(0xFFDC2626) // Red when ≤ 5 min
-        remaining <= 600  -> Color(0xFFD97706) // Orange when ≤ 10 min
-        else              -> Color(0xFF059669) // Green normal
+    val badgeColor = when {
+        remaining <= 300  -> Color(0xFFDC2626)  // red ≤ 5 min
+        remaining <= 600  -> Color(0xFFD97706)  // orange ≤ 10 min
+        else              -> Color(0xFF2563EB)  // blue (NTA exact)
     }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = "Remaining Time : ",
-            fontSize = 12.sp,
-            color = Color(0xFF374151)
+            fontSize = 11.sp,
+            color = Color(0xFF374151),
+            fontWeight = FontWeight.Normal
         )
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(color)
-                .padding(horizontal = 10.dp, vertical = 3.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(badgeColor)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "%02d:%02d:%02d".format(hours, minutes, seconds),
                 color = Color.White,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+                fontSize = 13.sp,
+                letterSpacing = 1.sp
             )
         }
     }
