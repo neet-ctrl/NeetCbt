@@ -9,6 +9,15 @@ android {
     namespace = "com.neet.cbt"
     compileSdk = 34
 
+    signingConfigs {
+        create("release") {
+            storeFile     = file("keystore/my-release-key.jks")
+            storePassword = "Sh@090609"
+            keyAlias      = "my-key"
+            keyPassword   = "Sh@090609"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.neet.cbt"
         minSdk = 24
@@ -19,9 +28,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // arm64-v8a only — generates a single lean APK for 64-bit devices
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

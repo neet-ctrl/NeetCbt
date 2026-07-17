@@ -1,0 +1,119 @@
+name: Build Release APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# All `run` steps execute from the Android project subdirectory
+defaults:
+  run:
+    working-directory: neet-cbt-app
+
+jobs:
+  build:
+    name: Build Signed Release APK (arm64-v8a)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('neet-cbt-app/**/*.gradle*', 'neet-cbt-app/**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Decode release keystore
+        run: |
+          base64 -d app/keystore/my-release-key.jks.b64 > app/keystore/my-release-key.jks
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build signed release APK
+        run: ./gradlew assembleRelease --no-daemon -x lint -x test -x lintRelease
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Found APK: $APK_PATH"
+          echo "path=neet-cbt-app/$APK_PATH" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$APK_PATH")"  >> "$GITHUB_OUTPUT"
+
+      - name: Get APK size
+        id: apk_info
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          SIZE_MB=$(echo "scale=2; $(stat -c%s "$APK_PATH") / 1048576" | bc)
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "size=${SIZE_MB} MB"      >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}"      >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neet-cbt-arm64-release
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          DATE=$(date +'%B %d, %Y')
+          VERSION="${{ steps.apk_info.outputs.version }}"
+          BODY="## 📱 NEET CBT v${VERSION}
+
+          **Release Date:** ${DATE}
+          **Architecture:** arm64-v8a (64-bit)
+          **APK Size:** ${{ steps.apk_info.outputs.size }}
+          **Commit:** \`${{ github.sha }}\`
+
+          ### ✅ What's Included
+          - All 180 NEET Re-Exam 2026 (Code 70) questions
+          - Full NTA CBT interface — landscape, offline, no internet needed
+          - PDF figure rendering for all 36 diagram questions
+          - Color-coded question palette, countdown timer, auto-submit
+          - Scoring: +4 correct · −1 wrong · Q40 dropped (+4 bonus)
+          - Login → Instructions → Exam → Summary → Result flow
+
+          ### 📥 Installation
+          1. Download \`${{ steps.apk.outputs.name }}\` below
+          2. Enable **Install from Unknown Sources** on your device
+          3. Install and allow storage/notification permissions
+
+          ---
+          *Signed release build — safe to install directly.*"
+
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$BODY"     >> "$GITHUB_OUTPUT"
+          echo "EOF"       >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.apk_info.outputs.version }}-build${{ github.run_number }}
+          name: NEET CBT v${{ steps.apk_info.outputs.version }} — Build ${{ github.run_number }}
+          body: ${{ steps.notes.outputs.body }}
+          files: ${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
