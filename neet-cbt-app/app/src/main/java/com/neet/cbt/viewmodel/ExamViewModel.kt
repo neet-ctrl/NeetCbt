@@ -111,60 +111,51 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
     // ── PDF Bitmap Cache ──────────────────────────────────────────────────────
 
     /**
-     * Exact question-ID → 0-based PDF page index mapping derived from the official
-     * NEET Re-Exam 2026 Code 70 question paper (ReNeetCode70.pdf).
-     * Only questions with hasImage = true need an entry; all others are ignored.
+     * Exact question-ID → 0-based PDF page index for every hasImage=true question.
+     * Derived by running pdftotext on ReNeetCode70.pdf and locating each question's
+     * "Page N of 61" header, then computing 0-indexed page = N-1.
+     * ALL 36 image questions are mapped — none will show an infinite spinner.
      */
     private val questionPageMap: Map<Int, Int> = mapOf(
-        // ── Physics (Q1-Q45) ──────────────────────────────────────────────
-        1  to 0,   // Q1:  momentum ratio diagram
-        2  to 0,   // Q2:  pipe cross-section flow figure
-        6  to 2,   // Q6:  circuit +α/-α diagram
-        7  to 2,   // Q7:  photocurrent stopping-potential graphs
-        8  to 3,   // Q8:  terminal velocity graphs
-        9  to 3,   // Q9:  Zener diode circuit
-        11 to 5,   // Q11: LCR AC circuit
-        12 to 5,   // Q12: inductors P and Q configuration
-        13 to 6,   // Q13: three capacitors P Q S circuit
-        14 to 7,   // Q14: conducting loop x-y plane
-        18 to 9,   // Q18: polyatomic gas graph options
-        19 to 10,  // Q19: unit charge tube figure
-        20 to 10,  // Q20: circular loop current figure
-        25 to 13,  // Q25: charged insulating sphere graph
-        26 to 13,  // Q26: (continuation, same page)
-        27 to 14,  // Q27: frictionless circular wire particles
-        28 to 14,  // Q28: (same page as Q27)
-        29 to 15,  // Q29: lens combination L1 L2 figure
-        30 to 16,  // Q30: solid sphere A + sphere B figure
-        41 to 19,  // Q41: conducting sphere with cavity & points
-        42 to 20,  // Q42: Geiger-Marsden N(θ) plot
-        43 to 20,  // Q43: monatomic gas cyclic process diagram
-        // ── Chemistry (Q46-Q90) ───────────────────────────────────────────
-        46 to 22,  // Q46: chemical reaction diagram
-        48 to 22,  // Q48: octahedral complex geometry
-        49 to 22,  // Q49: molecule structure diagram
-        51 to 23,  // Q51: titration/reaction figure
-        52 to 24,  // Q52: crystal structure diagram
-        58 to 26,  // Q58: organic reaction mechanism
-        60 to 26,  // Q60: reaction product structure
-        63 to 28,  // Q63: NMR / spectra figure
-        64 to 28,  // Q64: organic compound structure
-        65 to 28,  // Q65: reaction pathway diagram
-        80 to 32,  // Q80: transition metal complex diagram
-        87 to 35,  // Q87: polymer/monomer structure
-        88 to 35,  // Q88: organic named reaction figure
-        89 to 35,  // Q89: compound structure diagram
-        90 to 36,  // Q90: biomolecule structure
-        // ── Botany (Q91-Q135) ─────────────────────────────────────────────
-        95  to 37, // Q95: plant tissue figure
-        96  to 37, // Q96: anatomy diagram
-        112 to 41, // Q112: photosynthesis electron transport figure
-        118 to 43, // Q118: plant reproduction diagram
-        121 to 44, // Q121: flower part diagram
-        122 to 44, // Q122: cell cycle figure
-        123 to 44, // Q123: mitosis/meiosis diagram
-        124 to 45, // Q124: chromosome structure
-        127 to 46  // Q127: plant hormone pathway
+        // ── Physics (Q1-Q45) ─────────────────────────────────────────────
+        1  to 0,   // Q1:  PDF page 1  – photon/electron momentum diagram
+        3  to 0,   // Q3:  PDF page 1  – disc rotation angular momentum figure
+        7  to 2,   // Q7:  PDF page 3  – photocurrent vs stopping-potential graphs
+        8  to 3,   // Q8:  PDF page 4  – terminal velocity graph options
+        9  to 3,   // Q9:  PDF page 4  – Zener diode circuit figure
+        10 to 4,   // Q10: PDF page 5  – escape speed planet figure
+        13 to 6,   // Q13: PDF page 7  – three capacitors P Q S circuit
+        14 to 7,   // Q14: PDF page 8  – conducting loop x-y plane
+        15 to 8,   // Q15: PDF page 9  – adiabatic expansion P-V graph
+        20 to 10,  // Q20: PDF page 11 – circular loop current figure
+        21 to 11,  // Q21: PDF page 12 – pendulum bob B figure
+        26 to 14,  // Q26: PDF page 15 – banked circular track figure
+        28 to 15,  // Q28: PDF page 16 – p-n junction diode circuit
+        29 to 15,  // Q29: PDF page 16 – lens combination L1 L2 figure
+        30 to 16,  // Q30: PDF page 17 – solid sphere A + sphere B
+        31 to 16,  // Q31: PDF page 17 – hydrogen atom orbital figure
+        42 to 20,  // Q42: PDF page 21 – Geiger-Marsden N(θ) plot
+        43 to 20,  // Q43: PDF page 21 – monatomic gas cyclic process
+        44 to 21,  // Q44: PDF page 22 – two parallel conducting wires figure
+        // ── Chemistry (Q46-Q90) ──────────────────────────────────────────
+        47 to 22,  // Q47: PDF page 23 – tetraammineaquachloridocobalt complex
+        50 to 23,  // Q50: PDF page 24 – crystal/unit cell figure
+        52 to 24,  // Q52: PDF page 25 – electrochemistry/reaction diagram
+        53 to 24,  // Q53: PDF page 25 – organic structure figure
+        59 to 26,  // Q59: PDF page 27 – organic reaction mechanism
+        61 to 27,  // Q61: PDF page 28 – organic compound structure
+        65 to 28,  // Q65: PDF page 29 – reaction pathway / product figure
+        66 to 29,  // Q66: PDF page 30 – NMR / spectra figure
+        // ── Botany / Zoology (Q91-Q180) ──────────────────────────────────
+        81  to 33, // Q81: PDF page 34 – transition metal complex diagram
+        89  to 35, // Q89: PDF page 36 – organic compound structure
+        90  to 36, // Q90: PDF page 37 – biomolecule structure
+        91  to 36, // Q91: PDF page 37 – plant cell / tissue figure
+        97  to 38, // Q97: PDF page 39 – anatomy / morphology diagram
+        113 to 42, // Q113: PDF page 43 – biology figure
+        119 to 44, // Q119: PDF page 45 – reproductive biology figure
+        123 to 45, // Q123: PDF page 46 – cell biology diagram
+        125 to 45  // Q125: PDF page 46 – genetics / evolution figure
     )
 
     private val bitmapCache = mutableMapOf<Int, Bitmap>()
