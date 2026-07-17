@@ -1,0 +1,168 @@
+Here is the exact add-on to paste right after your previous prompt. It handles PDF images (diagrams, graphs, chemistry structures) natively in Android.
+
+---
+
+📌 ADDENDUM: Handling Questions with Embedded Images/Diagrams in PDF
+
+Problem: pdfbox-android extracts text only. It ignores images. NEET questions often contain diagrams (Biology figures, Physics circuits, Chemistry structures) inside the question stem or options.
+
+Solution: Hybrid approach – use Android's native PdfRenderer to render the actual PDF page as a Bitmap and display it alongside the clickable text options.
+
+---
+
+1. Add this to your build.gradle.kts (Module: app) dependencies
+
+```kotlin
+// No extra library needed! PdfRenderer is part of Android framework (API 21+).
+// Just ensure you have:
+implementation("androidx.core:core-ktx:1.13.1")
+```
+
+---
+
+2. Update PdfParser.kt – Store Page Number Per Question
+
+Modify the parser so that when extracting text, it also records which PDF page number (0-indexed) each question belongs to.
+
+Update the Question data class:
+
+```kotlin
+data class Question(
+    val id: Int,
+    val text: String,
+    val options: List<String>, // 4 options
+    val correctOption: Int = -1,
+    val pageIndex: Int = 0 // <-- NEW: which PDF page this question lives on
+)
+```
+
+During parsing, increment a currentPage counter whenever you hit a Form Feed or a new page marker. Assign pageIndex to each question.
+
+---
+
+3. Add Image Rendering Utility (ImageRenderer.kt)
+
+Create this helper to render a PDF page to a Bitmap:
+
+```kotlin
+// utils/ImageRenderer.kt
+import android.graphics.Bitmap
+import android.os.ParcelFileDescriptor
+import com.tom_roush.pdfbox.android.PdfBoxResourceLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+
+object ImageRenderer {
+    suspend fun renderPageBitmap(pdfFile: File, pageIndex: Int): Bitmap? = withContext(Dispatchers.IO) {
+        try {
+            val descriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            PdfRenderer(descriptor).use { renderer ->
+                if (pageIndex in 0 until renderer.pageCount) {
+                    val page = renderer.openPage(pageIndex)
+                    val bitmap = Bitmap.createBitmap(
+                        page.width,
+                        page.height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.close()
+                    return@withContext bitmap
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext null
+        }
+        return@withContext null
+    }
+}
+```
+
+---
+
+4. Update ExamViewModel.kt – Cache Bitmaps
+
+To avoid re-rendering the same page repeatedly (expensive), cache rendered bitmaps:
+
+```kotlin
+// In ExamViewModel
+private val bitmapCache = mutableMapOf<Int, Bitmap>() // pageIndex -> Bitmap
+
+fun getPageBitmap(pdfFile: File, pageIndex: Int): Bitmap? {
+    return bitmapCache[pageIndex] ?: run {
+        val bitmap = ImageRenderer.renderPageBitmap(pdfFile, pageIndex)
+        bitmap?.let { bitmapCache[pageIndex] = it }
+        bitmap
+    }
+}
+```
+
+Call getPageBitmap in a LaunchedEffect when the current question changes.
+
+---
+
+5. Update UI (ExamScreen.kt) – Display Image Above Options
+
+In the question display column:
+
+```kotlin
+// Inside the question column (left side)
+val bitmap by viewModel.currentPageBitmap.collectAsState()
+
+// Show question text
+Text("Question ${currentQuestion.id}:", ...)
+Text(currentQuestion.text, ...)
+
+// --- SHOW THE RENDERED PDF PAGE IMAGE ---
+if (bitmap != null) {
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "Diagram for Question ${currentQuestion.id}",
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp) // Adjust height as needed; use .wrapContentHeight() with constraints
+            .padding(vertical = 8.dp),
+        contentScale = ContentScale.Fit
+    )
+}
+
+// Show the 4 clickable options (A, B, C, D) as RadioButtons (text-only for interaction)
+options.forEachIndexed { index, optionText ->
+    Row(Modifier.clickable { viewModel.selectOption(index) }) {
+        RadioButton(selected = selectedIndex == index, onClick = { ... })
+        Text("(${char = 'A' + index}) $optionText")
+    }
+}
+```
+
+Key Point: The image is purely visual reference. The actual interaction (clicking A/B/C/D) still happens via Compose RadioButtons using the text options parsed earlier. This way:
+
+· Diagrams are displayed perfectly.
+· The app remains fully native and responsive.
+· No complex OCR or image-to-text conversion required.
+
+---
+
+6. Memory & Performance Handling
+
+· Use remember or derivedStateOf to avoid recomposing the bitmap on every state change.
+· When the user switches questions, check the cache first.
+· If the PDF is large, consider using Bitmap.Config.RGB_565 instead of ARGB_8888 to save memory.
+· Clear the cache in onCleared() of the ViewModel.
+
+---
+
+7. Fallback if Page Index is Unknown
+
+If your parser cannot determine the exact page (e.g., all questions extracted but page breaks unknown), simply render the entire PDF page 0 for all questions as a fallback (or let the user scroll manually). Alternatively, add a manual toggle in the UI to "Show Page X" to let the user flip pages themselves.
+
+---
+
+▶️ How to append this
+
+Simply copy the above entire block and paste it after your previous full prompt. Then tell the AI agent:
+
+"Append this addendum to the previous prompt and implement these image-rendering changes. Keep everything else exactly the same."
+
+This ensures your native app handles both text and images flawlessly, just like the real NEET CBT.
